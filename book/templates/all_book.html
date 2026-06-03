@@ -1,0 +1,12 @@
+{% extends 'master.html' %}
+{% block title %}All Books{% endblock %}
+
+{% block content %}
+<h1>All Books</h1>
+<p><a href="/">Home</a></p>
+<ul>
+  {% for x in mybooks %}
+    <li><a href="details/{{ x.id }}">{{ x.title }} by {{ x.author }}</a></li>
+  {% endfor %}
+</ul>
+{% endblock %}
