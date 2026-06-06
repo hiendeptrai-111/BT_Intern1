@@ -3,11 +3,11 @@
 {% block title %}All Books{% endblock %}
 {% block content %}
 <h1>Chi Tiết Sách</h1>
-<h1>{{ mybook.title }} by {{ mybook.author }}</h1>
+<h1>{{ all_books.title }} by {{ all_books.author }}</h1>
 
-<p>Price: {{ mybook.price }}</p>
-<p>Quantity: {{ mybook.quantity }}</p>
+<p>Price: {{ all_books.price }}</p>
+<p>Quantity: {{ all_books.quantity }}</p>
 
-<p>Back to <a href="/book">Books</a></p>
+<p>Back to <a href="/all_book/">Books</a></p>
 
 {% endblock %}
