@@ -1,127 +1,183 @@
-/* ============================================
-   App.jsx - File chính của ứng dụng Quản lý Sách
-   ============================================
-
-   📖 GIẢI THÍCH CHO NGƯỜI MỚI:
-
-   1. React là gì?
-      - React là một thư viện JavaScript giúp xây dựng giao diện web.
-      - Thay vì viết HTML thuần, ta viết JSX (HTML bên trong JavaScript).
-      - React chia giao diện thành các "component" (thành phần) nhỏ.
-
-   2. useState là gì?
-      - useState cho phép component "nhớ" dữ liệu (gọi là state).
-      - Ví dụ: const [books, setBooks] = useState([])
-        → books: giá trị hiện tại (danh sách sách)
-        → setBooks: hàm để thay đổi giá trị
-        → useState([]): giá trị ban đầu là mảng rỗng []
-
-   3. useEffect là gì?
-      - useEffect chạy một hàm khi component được hiển thị lần đầu,
-        hoặc khi một giá trị nào đó thay đổi.
-      - Ví dụ: useEffect(() => { fetchBooks() }, [page])
-        → Mỗi khi 'page' thay đổi → gọi lại fetchBooks()
-
-   4. async/await là gì?
-      - Dùng để gọi API (lấy dữ liệu từ server) một cách tuần tự.
-      - await fetch(...) nghĩa là "chờ server trả dữ liệu về rồi mới tiếp tục".
-
-   5. JSX là gì?
-      - Là cú pháp giống HTML nhưng viết trong JavaScript.
-      - Dùng className thay cho class (vì class là từ khóa trong JS).
-      - Dùng {} để chèn biến JavaScript vào HTML.
-      - Ví dụ: <td>{book.title}</td> → hiển thị tên sách
-*/
-
-// --- IMPORT ---
-// import: lấy các công cụ từ thư viện React
 import { useState, useEffect } from 'react';
-// import file CSS để trang trí giao diện
 import './App.css';
 
-// Đường dẫn API backend (Django) - tất cả request sẽ gửi đến đây
-const API = '/api/books/';
+// =======================
+// CẤU HÌNH API
+// =======================
+const API_BOOKS = '/api/books/';
+const API_TOKEN = '/api/token/';
+const API_REFRESH = '/api/token/refresh/';
+const API_LOGOUT = '/api/logout/';
 
-// ========================
-// COMPONENT CHÍNH: App
-// ========================
-// Đây là component (thành phần) chính của ứng dụng.
-// Trong React, mỗi component là một hàm trả về JSX (HTML).
+// =======================
+// HÀM HELPER: Gọi API có kèm Token
+// =======================
+// Hàm này tự động:
+// 1. Gắn Authorization header (Bearer token)
+// 2. Nếu access token hết hạn (401) → dùng refresh token lấy access mới
+// 3. Nếu refresh cũng hết hạn → bắt đăng nhập lại
+async function apiFetch(url, options = {}, onLogout) {
+  const accessToken = localStorage.getItem('access_token');
+
+  // Gắn header Authorization
+  const headers = {
+    'Content-Type': 'application/json',
+    ...options.headers,
+  };
+  if (accessToken) {
+    headers['Authorization'] = `Bearer ${accessToken}`;
+  }
+
+  let res = await fetch(url, { ...options, headers });
+
+  // Nếu bị 401 (Unauthorized) → thử refresh token
+  if (res.status === 401) {
+    const refreshToken = localStorage.getItem('refresh_token');
+    if (!refreshToken) {
+      onLogout();
+      return res;
+    }
+
+    // Gọi API refresh token
+    const refreshRes = await fetch(API_REFRESH, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh: refreshToken }),
+    });
+
+    if (refreshRes.ok) {
+      const data = await refreshRes.json();
+      localStorage.setItem('access_token', data.access);
+      // Gọi lại request ban đầu với token mới
+      headers['Authorization'] = `Bearer ${data.access}`;
+      res = await fetch(url, { ...options, headers });
+    } else {
+      // Refresh token cũng hết hạn → bắt đăng nhập lại
+      onLogout();
+    }
+  }
+
+  return res;
+}
+
+// =======================
+// COMPONENT CHÍNH
+// =======================
 function App() {
+  // --- AUTH STATE ---
+  const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('access_token'));
+  const [username, setUsername] = useState(localStorage.getItem('username') || '');
+  const [loginForm, setLoginForm] = useState({ username: '', password: '' });
+  const [loginError, setLoginError] = useState('');
+  const [loginLoading, setLoginLoading] = useState(false);
 
-  // --- STATE (Dữ liệu mà component cần "nhớ") ---
-
-  // Danh sách sách lấy từ API
+  // --- BOOK STATE ---
   const [books, setBooks] = useState([]);
-  // Tổng số sách (để tính phân trang)
   const [count, setCount] = useState(0);
-  // Trang hiện tại (bắt đầu từ trang 1)
   const [page, setPage] = useState(1);
-  // Số sách hiển thị trên mỗi trang
   const [pageSize, setPageSize] = useState(20);
-  // Giá trị đang gõ trong ô tìm kiếm
   const [filterTitle, setFilterTitle] = useState('');
   const [filterAuthor, setFilterAuthor] = useState('');
-  // Giá trị tìm kiếm đã submit (gửi lên API)
   const [search, setSearch] = useState({ title: '', author: '' });
+  const [totalPages, setTotalPages] = useState(1);
 
-  // --- STATE cho Modal (cửa sổ popup) ---
-  // modal có thể là: 'add' | 'edit' | 'detail' | 'delete' | null (đóng)
+  // --- MODAL STATE ---
   const [modal, setModal] = useState(null);
-  // Sách đang được chọn (để xem, sửa, xóa)
   const [selected, setSelected] = useState(null);
-  // Dữ liệu form nhập liệu
   const [form, setForm] = useState({ title: '', author: '', price: '', quantity: '' });
-  // Trạng thái đang tải dữ liệu
   const [loading, setLoading] = useState(false);
 
-  // Tính tổng số trang = tổng sách / số sách mỗi trang (làm tròn lên)
-  const totalPages = Math.ceil(count / pageSize) || 1;
+  // Hàm logout — xóa token khỏi localStorage
+  const handleLogout = async () => {
+    const refreshToken = localStorage.getItem('refresh_token');
+    // Gọi API logout để blacklist refresh token
+    if (refreshToken) {
+      try {
+        await apiFetch(API_LOGOUT, {
+          method: 'POST',
+          body: JSON.stringify({ refresh: refreshToken }),
+        }, () => {});
+      } catch (e) {
+        // Ignore errors during logout
+      }
+    }
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
+    localStorage.removeItem('username');
+    setIsLoggedIn(false);
+    setUsername('');
+    setBooks([]);
+  };
 
-  // ========================
-  // HÀM GỌI API
-  // ========================
+  // Hàm login
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setLoginError('');
+    setLoginLoading(true);
 
-  // fetchBooks: Lấy danh sách sách từ server
+    try {
+      const res = await fetch(API_TOKEN, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: loginForm.username,
+          password: loginForm.password,
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        localStorage.setItem('access_token', data.access);
+        localStorage.setItem('refresh_token', data.refresh);
+        localStorage.setItem('username', loginForm.username);
+        setUsername(loginForm.username);
+        setIsLoggedIn(true);
+        setLoginForm({ username: '', password: '' });
+      } else {
+        setLoginError('Sai tên đăng nhập hoặc mật khẩu!');
+      }
+    } catch (err) {
+      setLoginError('Không thể kết nối đến server!');
+    }
+
+    setLoginLoading(false);
+  };
+
+  // =======================
+  // BOOK API FUNCTIONS
+  // =======================
+
   const fetchBooks = async () => {
-    setLoading(true); // Bật trạng thái "đang tải"
-
-    // Tạo query string: ?page=1&page_size=20&title=...&author=...
+    setLoading(true);
     const params = new URLSearchParams({ page, page_size: pageSize });
     if (search.title) params.append('title', search.title);
     if (search.author) params.append('author', search.author);
 
     try {
-      // Gọi API và chờ kết quả
-      const res = await fetch(`${API}?${params}`);
-      // Chuyển kết quả sang JSON
-      const data = await res.json();
-      // Cập nhật state với dữ liệu mới
-      setBooks(data.results || []);
-      setCount(data.count || 0);
+      const res = await apiFetch(`${API_BOOKS}?${params}`, {}, handleLogout);
+      if (res.ok) {
+        const data = await res.json();
+        setBooks(data.results || []);
+        setCount(data.count || 0);
+        setTotalPages(data.total_pages || Math.ceil((data.count || 0) / pageSize) || 1);
+      }
     } catch (err) {
-      // Nếu lỗi → thông báo cho người dùng
       alert('Lỗi kết nối API');
     }
-
-    setLoading(false); // Tắt trạng thái "đang tải"
+    setLoading(false);
   };
 
-  // useEffect: Mỗi khi page, pageSize, hoặc search thay đổi → gọi lại fetchBooks
-  useEffect(() => { fetchBooks(); }, [page, pageSize, search]);
+  useEffect(() => {
+    if (isLoggedIn) fetchBooks();
+  }, [page, pageSize, search, isLoggedIn]);
 
-  // ========================
-  // CÁC HÀM XỬ LÝ SỰ KIỆN
-  // ========================
-
-  // Khi bấm nút "Tìm kiếm"
+  // --- Filter ---
   const handleFilter = (e) => {
-    e.preventDefault(); // Ngăn trang reload (hành vi mặc định của form)
-    setPage(1);         // Quay về trang 1
-    setSearch({ title: filterTitle, author: filterAuthor }); // Cập nhật từ khóa tìm kiếm
+    e.preventDefault();
+    setPage(1);
+    setSearch({ title: filterTitle, author: filterAuthor });
   };
 
-  // Khi bấm nút "Reset" → xóa hết bộ lọc
   const resetFilter = () => {
     setFilterTitle('');
     setFilterAuthor('');
@@ -129,70 +185,66 @@ function App() {
     setSearch({ title: '', author: '' });
   };
 
-  // Mở popup "Thêm sách mới"
+  // --- CRUD Modals ---
   const openAdd = () => {
-    setForm({ title: '', author: '', price: '', quantity: '' }); // Xóa trắng form
-    setModal('add'); // Mở modal loại 'add'
+    setForm({ title: '', author: '', price: '', quantity: '' });
+    setModal('add');
   };
 
-  // Mở popup "Chi tiết sách" - gọi API lấy thông tin chi tiết
   const openDetail = async (id) => {
-    const res = await fetch(`${API}${id}/`);
-    const data = await res.json();
-    setSelected(data);    // Lưu sách được chọn
-    setModal('detail');   // Mở modal loại 'detail'
+    const res = await apiFetch(`${API_BOOKS}${id}/`, {}, handleLogout);
+    if (res.ok) {
+      const data = await res.json();
+      setSelected(data);
+      setModal('detail');
+    }
   };
 
-  // Mở popup "Sửa sách" - gọi API lấy dữ liệu hiện tại để điền vào form
   const openEdit = async (id) => {
-    const res = await fetch(`${API}${id}/`);
-    const data = await res.json();
-    setSelected(data);
-    // Điền dữ liệu hiện tại vào form
-    setForm({ title: data.title, author: data.author, price: data.price, quantity: data.quantity });
-    setModal('edit');
+    const res = await apiFetch(`${API_BOOKS}${id}/`, {}, handleLogout);
+    if (res.ok) {
+      const data = await res.json();
+      setSelected(data);
+      setForm({ title: data.title, author: data.author, price: data.price, quantity: data.quantity });
+      setModal('edit');
+    }
   };
 
-  // Mở popup "Xác nhận xóa"
   const openDelete = (book) => {
     setSelected(book);
     setModal('delete');
   };
 
-  // Xử lý thêm sách mới (POST request)
   const handleAdd = async (e) => {
     e.preventDefault();
-    const res = await fetch(API, {
-      method: 'POST',  // POST = tạo mới
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        title: form.title,
-        author: form.author,
-        price: parseFloat(form.price),    // Chuyển string → số thực
-        quantity: parseInt(form.quantity), // Chuyển string → số nguyên
-      }),
-    });
-    if (res.ok) {          // Nếu thành công (status 200-299)
-      setModal(null);      // Đóng modal
-      fetchBooks();        // Tải lại danh sách
-    } else {
-      alert('Thêm sách thất bại');
-    }
-  };
-
-  // Xử lý sửa sách (PUT request)
-  const handleEdit = async (e) => {
-    e.preventDefault();
-    const res = await fetch(`${API}${selected.id}/`, {
-      method: 'PUT',  // PUT = cập nhật toàn bộ
-      headers: { 'Content-Type': 'application/json' },
+    const res = await apiFetch(API_BOOKS, {
+      method: 'POST',
       body: JSON.stringify({
         title: form.title,
         author: form.author,
         price: parseFloat(form.price),
         quantity: parseInt(form.quantity),
       }),
-    });
+    }, handleLogout);
+    if (res.ok) {
+      setModal(null);
+      fetchBooks();
+    } else {
+      alert('Thêm sách thất bại');
+    }
+  };
+
+  const handleEdit = async (e) => {
+    e.preventDefault();
+    const res = await apiFetch(`${API_BOOKS}${selected.id}/`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        title: form.title,
+        author: form.author,
+        price: parseFloat(form.price),
+        quantity: parseInt(form.quantity),
+      }),
+    }, handleLogout);
     if (res.ok) {
       setModal(null);
       fetchBooks();
@@ -201,12 +253,12 @@ function App() {
     }
   };
 
-  // Xử lý xóa sách (DELETE request)
   const handleDelete = async () => {
-    const res = await fetch(`${API}${selected.id}/`, { method: 'DELETE' });
+    const res = await apiFetch(`${API_BOOKS}${selected.id}/`, {
+      method: 'DELETE',
+    }, handleLogout);
     if (res.ok) {
       setModal(null);
-      // Nếu xóa sách cuối cùng trên trang → quay về trang trước
       if (books.length === 1 && page > 1) setPage(page - 1);
       else fetchBooks();
     } else {
@@ -214,37 +266,66 @@ function App() {
     }
   };
 
-  // ========================
-  // PHẦN GIAO DIỆN (JSX)
-  // ========================
-  // return (...) → trả về HTML mà React sẽ hiển thị trên trình duyệt
+  // =======================
+  // TRANG ĐĂNG NHẬP
+  // =======================
+  if (!isLoggedIn) {
+    return (
+      <div className="login-wrapper">
+        <div className="login-box">
+          <h1>📚 Quản lý sách</h1>
+          <p className="subtitle">Đăng nhập để tiếp tục</p>
+          <form onSubmit={handleLogin}>
+            <label>Tên đăng nhập</label>
+            <input
+              required
+              placeholder="Nhập username..."
+              value={loginForm.username}
+              onChange={e => setLoginForm({ ...loginForm, username: e.target.value })}
+            />
+            <label>Mật khẩu</label>
+            <input
+              required
+              type="password"
+              placeholder="Nhập mật khẩu..."
+              value={loginForm.password}
+              onChange={e => setLoginForm({ ...loginForm, password: e.target.value })}
+            />
+            <button type="submit" disabled={loginLoading}>
+              {loginLoading ? '⏳ Đang đăng nhập...' : '🔐 Đăng nhập'}
+            </button>
+          </form>
+          {loginError && <div className="login-error">❌ {loginError}</div>}
+        </div>
+      </div>
+    );
+  }
 
+  // =======================
+  // TRANG QUẢN LÝ SÁCH (sau khi đăng nhập)
+  // =======================
   return (
     <div className="container">
+      {/* Header */}
+      <div className="header">
+        <h1>📚 Quản lý sách</h1>
+        <div className="header-right">
+          <span>👤 {username}</span>
+          <button onClick={handleLogout} className="btn-logout">🚪 Đăng xuất</button>
+        </div>
+      </div>
 
-      {/* ===== TIÊU ĐỀ ===== */}
-      <h1>📚 Quản lý sách</h1>
-
-      {/* ===== THANH TÌM KIẾM ===== */}
-      {/* form: khi submit sẽ gọi handleFilter */}
+      {/* Filter */}
       <div className="section">
         <form onSubmit={handleFilter} className="filter-form">
-          <input
-            placeholder="Tìm theo tên sách..."
-            value={filterTitle}
-            onChange={e => setFilterTitle(e.target.value)}
-          />
-          <input
-            placeholder="Tìm theo tác giả..."
-            value={filterAuthor}
-            onChange={e => setFilterAuthor(e.target.value)}
-          />
+          <input placeholder="Tìm theo tên sách..." value={filterTitle} onChange={e => setFilterTitle(e.target.value)} />
+          <input placeholder="Tìm theo tác giả..." value={filterAuthor} onChange={e => setFilterAuthor(e.target.value)} />
           <button type="submit">🔍 Tìm kiếm</button>
           <button type="button" onClick={resetFilter} className="btn-secondary">↺ Reset</button>
         </form>
       </div>
 
-      {/* ===== THANH ĐIỀU KHIỂN ===== */}
+      {/* Controls */}
       <div className="controls">
         <button onClick={openAdd} className="btn-add">＋ Thêm sách mới</button>
         <div>
@@ -257,14 +338,7 @@ function App() {
         </div>
       </div>
 
-      {/* ===== BẢNG DANH SÁCH SÁCH ===== */}
-      {/*
-        Cấu trúc bảng HTML:
-        <table>
-          <thead> → Phần tiêu đề (hàng đầu tiên, nền xanh)
-          <tbody> → Phần dữ liệu (các hàng sách)
-        </table>
-      */}
+      {/* Table */}
       <table>
         <thead>
           <tr>
@@ -277,14 +351,11 @@ function App() {
           </tr>
         </thead>
         <tbody>
-          {/* Nếu đang tải → hiện "Đang tải..." */}
           {loading ? (
             <tr><td colSpan="6" style={{ textAlign: 'center', padding: '30px', color: '#999' }}>⏳ Đang tải...</td></tr>
           ) : books.length === 0 ? (
-            /* Nếu không có sách → hiện thông báo */
             <tr><td colSpan="6" style={{ textAlign: 'center', padding: '30px', color: '#999' }}>📭 Không có dữ liệu</td></tr>
           ) : (
-            /* Nếu có sách → dùng .map() để lặp qua từng cuốn sách và tạo hàng */
             books.map(book => (
               <tr key={book.id}>
                 <td>{book.id}</td>
@@ -293,7 +364,6 @@ function App() {
                 <td>${book.price}</td>
                 <td>{book.quantity}</td>
                 <td>
-                  {/* 3 nút hành động cho mỗi sách */}
                   <button onClick={() => openDetail(book.id)} className="btn-sm">👁 Xem</button>
                   <button onClick={() => openEdit(book.id)} className="btn-sm btn-edit">✏️ Sửa</button>
                   <button onClick={() => openDelete(book)} className="btn-sm btn-del">🗑 Xóa</button>
@@ -304,29 +374,18 @@ function App() {
         </tbody>
       </table>
 
-      {/* ===== PHÂN TRANG ===== */}
+      {/* Pagination */}
       <div className="pagination">
-        <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page <= 1}>
-          ← Trang trước
-        </button>
+        <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page <= 1}>← Trang trước</button>
         <span>Trang {page} / {totalPages}</span>
-        <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page >= totalPages}>
-          Trang sau →
-        </button>
+        <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page >= totalPages}>Trang sau →</button>
       </div>
 
-      {/* ===== CỬA SỔ POPUP (Modal) ===== */}
-      {/*
-        modal && (...) nghĩa là:
-        "Nếu modal KHÔNG phải null → hiển thị nội dung bên trong"
-        Đây là cách React ẩn/hiện phần tử.
-      */}
+      {/* Modal */}
       {modal && (
         <div className="overlay" onClick={() => setModal(null)}>
-          {/* stopPropagation: ngăn click trong modal lan ra overlay (sẽ đóng modal) */}
           <div className="modal" onClick={e => e.stopPropagation()}>
 
-            {/* --- POPUP: THÊM SÁCH --- */}
             {modal === 'add' && (
               <>
                 <h2>📗 Thêm sách mới</h2>
@@ -347,7 +406,6 @@ function App() {
               </>
             )}
 
-            {/* --- POPUP: SỬA SÁCH --- */}
             {modal === 'edit' && selected && (
               <>
                 <h2>✏️ Sửa sách (ID: {selected.id})</h2>
@@ -368,7 +426,6 @@ function App() {
               </>
             )}
 
-            {/* --- POPUP: XEM CHI TIẾT --- */}
             {modal === 'detail' && selected && (
               <>
                 <h2>📖 Chi tiết sách</h2>
@@ -383,7 +440,6 @@ function App() {
               </>
             )}
 
-            {/* --- POPUP: XÁC NHẬN XÓA --- */}
             {modal === 'delete' && selected && (
               <>
                 <h2>⚠️ Xác nhận xóa</h2>
@@ -403,5 +459,4 @@ function App() {
   );
 }
 
-// Export component để file khác (main.jsx) có thể import và sử dụng
 export default App;

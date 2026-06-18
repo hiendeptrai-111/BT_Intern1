@@ -1,21 +1,10 @@
 /* ============================================
    App.css - CSS cho ứng dụng Quản lý Sách
-   ============================================
-
-   📖 GIẢI THÍCH CHO NGƯỜI MỚI:
-   - CSS là ngôn ngữ để trang trí giao diện (màu sắc, bố cục, kích thước...)
-   - Mỗi "class" (ví dụ: .container) sẽ được gắn vào HTML bằng className
-   - Bạn thay đổi giá trị trong CSS → giao diện thay đổi ngay lập tức
-*/
+   ============================================ */
 
 /* =====================
-   1. KHUNG CHÍNH (Container)
-   =====================
-   Đây là khung bao bọc toàn bộ nội dung trang.
-   max-width: giới hạn chiều rộng tối đa
-   margin: 0 auto → căn giữa trang
-   padding: tạo khoảng cách bên trong
-*/
+   1. KHUNG CHÍNH
+   ===================== */
 .container {
   max-width: 1000px;
   margin: 0 auto;
@@ -23,30 +12,136 @@
 }
 
 /* =====================
-   2. TIÊU ĐỀ CHÍNH (h1)
-   =====================
-   Tiêu đề lớn nhất trên trang "📚 Quản lý sách"
-   text-align: center → căn giữa chữ
-   color: đổi màu chữ
-   margin-bottom: tạo khoảng cách phía dưới
-*/
-h1 {
-  text-align: center;
-  color: #2c3e50;
-  font-size: 28px;
+   2. HEADER (Thanh trên cùng)
+   ===================== */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 25px;
   padding-bottom: 15px;
-  border-bottom: 3px solid #3498db; /* Gạch ngang phía dưới tiêu đề */
+  border-bottom: 3px solid #3498db;
+}
+
+.header h1 {
+  color: #2c3e50;
+  font-size: 28px;
+  margin: 0;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.header-right span {
+  font-size: 14px;
+  color: #555;
+}
+
+.btn-logout {
+  background: #e74c3c;
+  padding: 8px 16px;
+  font-size: 13px;
 }
 
 /* =====================
-   3. THANH TÌM KIẾM (Filter Form)
-   =====================
-   Khu vực chứa ô tìm kiếm theo tên sách và tác giả.
-   display: flex → xếp các phần tử theo hàng ngang
-   gap: khoảng cách giữa các phần tử
-   flex-wrap: wrap → tự xuống dòng khi không đủ chỗ
-*/
+   3. TRANG ĐĂNG NHẬP (Login)
+   ===================== */
+.login-wrapper {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.login-box {
+  background: white;
+  padding: 40px;
+  border-radius: 16px;
+  width: 400px;
+  max-width: 90%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: slideUp 0.4s ease;
+}
+
+.login-box h1 {
+  text-align: center;
+  color: #2c3e50;
+  font-size: 26px;
+  margin-bottom: 8px;
+}
+
+.login-box p.subtitle {
+  text-align: center;
+  color: #999;
+  font-size: 14px;
+  margin-bottom: 30px;
+}
+
+.login-box label {
+  display: block;
+  margin: 16px 0 6px;
+  font-weight: 600;
+  font-size: 14px;
+  color: #555;
+}
+
+.login-box input {
+  width: 100%;
+  padding: 12px 14px;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  font-size: 15px;
+  transition: border-color 0.3s;
+  box-sizing: border-box;
+}
+
+.login-box input:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+.login-box button {
+  width: 100%;
+  margin-top: 24px;
+  padding: 14px;
+  font-size: 16px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  border-radius: 8px;
+  color: white;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.2s;
+}
+
+.login-box button:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.login-box button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.login-error {
+  background: #ffeaea;
+  color: #c0392b;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 14px;
+  margin-top: 16px;
+  text-align: center;
+}
+
+/* =====================
+   4. THANH TÌM KIẾM (Filter)
+   ===================== */
 .section {
   margin-bottom: 20px;
 }
@@ -58,28 +153,23 @@ h1 {
   align-items: center;
 }
 
-/* Ô nhập liệu trong thanh tìm kiếm */
 .filter-form input {
   padding: 10px 14px;
   border: 2px solid #ddd;
-  border-radius: 8px;  /* Bo tròn góc */
+  border-radius: 8px;
   font-size: 14px;
   width: 200px;
-  transition: border-color 0.3s; /* Hiệu ứng mượt khi thay đổi */
+  transition: border-color 0.3s;
 }
 
-/* Khi click vào ô input → viền đổi màu xanh */
 .filter-form input:focus {
-  outline: none;          /* Bỏ viền mặc định của trình duyệt */
-  border-color: #3498db;  /* Viền xanh */
+  outline: none;
+  border-color: #3498db;
 }
 
 /* =====================
-   4. THANH ĐIỀU KHIỂN (Controls)
-   =====================
-   Chứa nút "Thêm sách" và bộ chọn số lượng hiển thị.
-   justify-content: space-between → đẩy 2 phần tử ra 2 bên
-*/
+   5. THANH ĐIỀU KHIỂN (Controls)
+   ===================== */
 .controls {
   display: flex;
   justify-content: space-between;
@@ -89,7 +179,6 @@ h1 {
   gap: 10px;
 }
 
-/* Ô chọn số lượng hiển thị (select dropdown) */
 .controls select {
   padding: 8px 12px;
   border: 2px solid #ddd;
@@ -100,15 +189,8 @@ h1 {
 }
 
 /* =====================
-   5. CÁC NÚT BẤM (Buttons)
-   =====================
-   Tất cả các nút đều có chung style cơ bản:
-   - padding: khoảng đệm bên trong nút
-   - border: none → không có viền
-   - border-radius: bo tròn góc
-   - cursor: pointer → con trỏ chuột hình bàn tay khi rê vào
-   - transition: hiệu ứng mượt khi hover
-*/
+   6. NÚT BẤM (Buttons)
+   ===================== */
 button {
   padding: 10px 20px;
   border: none;
@@ -116,18 +198,16 @@ button {
   cursor: pointer;
   font-size: 14px;
   font-weight: 600;
-  background: #3498db;     /* Màu xanh dương */
+  background: #3498db;
   color: white;
-  transition: all 0.2s ease;  /* Hiệu ứng mượt */
+  transition: all 0.2s ease;
 }
 
-/* Khi rê chuột vào nút → nút hơi nổi lên */
 button:hover {
-  transform: translateY(-1px);   /* Di chuyển lên 1px */
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15); /* Đổ bóng */
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
-/* Nút bị vô hiệu hóa (disabled) → mờ đi, không bấm được */
 button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
@@ -135,87 +215,49 @@ button:disabled {
   box-shadow: none;
 }
 
-/* --- Các loại nút khác nhau (màu khác nhau) --- */
-
-/* Nút phụ (màu xám) - dùng cho Reset, Hủy */
-.btn-secondary {
-  background: #95a5a6;
-}
-
-/* Nút thêm mới (màu xanh lá) */
-.btn-add {
-  background: #27ae60;
-  font-size: 15px;
-}
-
-/* Nút nguy hiểm - xóa (màu đỏ) */
-.btn-danger {
-  background: #e74c3c;
-}
-
-/* Nút nhỏ - dùng trong bảng cho các hành động */
-.btn-sm {
-  padding: 6px 14px;
-  font-size: 13px;
-  margin-right: 5px;
-}
-
-/* Nút sửa (màu cam) */
-.btn-edit {
-  background: #f39c12;
-}
-
-/* Nút xóa (màu đỏ) */
-.btn-del {
-  background: #e74c3c;
-}
+.btn-secondary { background: #95a5a6; }
+.btn-add { background: #27ae60; font-size: 15px; }
+.btn-danger { background: #e74c3c; }
+.btn-sm { padding: 6px 14px; font-size: 13px; margin-right: 5px; }
+.btn-edit { background: #f39c12; }
+.btn-del { background: #e74c3c; }
 
 /* =====================
-   6. BẢNG DỮ LIỆU (Table)
-   =====================
-   Hiển thị danh sách sách dạng bảng.
-   width: 100% → chiếm hết chiều rộng
-   border-collapse: collapse → các đường viền gộp lại thành 1
-*/
+   7. BẢNG DỮ LIỆU (Table)
+   ===================== */
 table {
   width: 100%;
   border-collapse: collapse;
   background: white;
   margin-bottom: 20px;
-  border-radius: 10px;         /* Bo tròn góc bảng */
-  overflow: hidden;             /* Ẩn phần tràn ra ngoài bo tròn */
-  box-shadow: 0 2px 10px rgba(0,0,0,0.08); /* Đổ bóng nhẹ */
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
 }
 
-/* Ô trong bảng (cả tiêu đề th và dữ liệu td) */
 th, td {
   padding: 12px 16px;
   text-align: left;
   font-size: 14px;
-  border-bottom: 1px solid #eee; /* Đường kẻ ngang phía dưới */
+  border-bottom: 1px solid #eee;
 }
 
-/* Hàng tiêu đề bảng → nền xanh, chữ trắng */
 th {
   background: #3498db;
   color: white;
   font-weight: 600;
   font-size: 13px;
-  text-transform: uppercase;    /* Chữ in hoa */
-  letter-spacing: 0.5px;        /* Giãn chữ ra một chút */
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
-/* Khi rê chuột vào một hàng → nền đổi màu xanh nhạt */
 tbody tr:hover {
   background: #ebf5fb;
 }
 
 /* =====================
-   7. PHÂN TRANG (Pagination)
-   =====================
-   Nút Previous / Next để chuyển trang.
-   justify-content: center → căn giữa
-*/
+   8. PHÂN TRANG (Pagination)
+   ===================== */
 .pagination {
   display: flex;
   justify-content: center;
@@ -230,38 +272,29 @@ tbody tr:hover {
 }
 
 /* =====================
-   8. CỬA SỔ BẬT LÊN (Modal / Popup)
-   =====================
-   Khi bấm Thêm/Sửa/Xem/Xóa → hiện cửa sổ popup ở giữa màn hình.
-   
-   .overlay: lớp phủ tối phía sau (nền mờ đen)
-   .modal: hộp thoại trắng ở giữa
-*/
-
-/* Lớp phủ tối - che toàn bộ màn hình */
+   9. MODAL / POPUP
+   ===================== */
 .overlay {
-  position: fixed;       /* Cố định trên màn hình */
-  inset: 0;              /* Phủ hết 4 cạnh: top, right, bottom, left = 0 */
-  background: rgba(0,0,0,0.5);  /* Nền đen, độ trong suốt 50% */
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
   display: flex;
-  align-items: center;   /* Căn giữa theo chiều dọc */
-  justify-content: center; /* Căn giữa theo chiều ngang */
-  z-index: 100;          /* Hiển thị trên tất cả phần tử khác */
-  animation: fadeIn 0.2s ease; /* Hiệu ứng xuất hiện mượt */
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  animation: fadeIn 0.2s ease;
 }
 
-/* Hộp thoại popup */
 .modal {
   background: white;
   padding: 30px;
   border-radius: 12px;
   width: 420px;
-  max-width: 90%;                    /* Không vượt quá 90% màn hình */
-  box-shadow: 0 20px 60px rgba(0,0,0,0.2); /* Đổ bóng mạnh */
-  animation: slideUp 0.3s ease;      /* Hiệu ứng trượt lên */
+  max-width: 90%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+  animation: slideUp 0.3s ease;
 }
 
-/* Tiêu đề trong modal */
 .modal h2 {
   color: #2c3e50;
   font-size: 20px;
@@ -270,7 +303,6 @@ tbody tr:hover {
   border-bottom: 2px solid #eee;
 }
 
-/* Nhãn (label) trong form */
 .modal label {
   display: block;
   margin: 12px 0 5px;
@@ -279,7 +311,6 @@ tbody tr:hover {
   color: #555;
 }
 
-/* Ô nhập liệu trong modal */
 .modal input {
   width: 100%;
   padding: 10px 14px;
@@ -287,22 +318,20 @@ tbody tr:hover {
   border-radius: 8px;
   font-size: 14px;
   transition: border-color 0.3s;
+  box-sizing: border-box;
 }
 
-/* Khi focus vào input trong modal → viền xanh */
 .modal input:focus {
   outline: none;
   border-color: #3498db;
 }
 
-/* Đoạn text trong modal (dùng cho Detail và Delete) */
 .modal p {
   margin: 8px 0;
   font-size: 15px;
   line-height: 1.6;
 }
 
-/* Khu vực chứa các nút trong modal */
 .modal-actions {
   margin-top: 25px;
   display: flex;
@@ -310,32 +339,14 @@ tbody tr:hover {
 }
 
 /* =====================
-   9. HIỆU ỨNG CHUYỂN ĐỘNG (Animations)
-   =====================
-   @keyframes: định nghĩa các hiệu ứng hoạt hình
-   
-   fadeIn: hiệu ứng mờ dần → rõ dần
-   slideUp: hiệu ứng trượt từ dưới lên
-*/
-
-/* Hiệu ứng mờ → rõ (dùng cho overlay) */
+   10. ANIMATIONS
+   ===================== */
 @keyframes fadeIn {
-  from {
-    opacity: 0;   /* Ban đầu: trong suốt */
-  }
-  to {
-    opacity: 1;   /* Kết thúc: hiện rõ */
-  }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
-/* Hiệu ứng trượt lên (dùng cho modal) */
 @keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);  /* Ban đầu: ở dưới 20px */
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);     /* Kết thúc: về vị trí gốc */
-  }
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
 }
