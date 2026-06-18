@@ -1,0 +1,13 @@
+{% extends 'master.html' %}
+
+{% block title %}All Books{% endblock %}
+{% block content %}
+<h1>Chi Tiết Sách</h1>
+<h1>{{ all_books.title }} by {{ all_books.author }}</h1>
+
+<p>Price: {{ all_books.price }}</p>
+<p>Quantity: {{ all_books.quantity }}</p>
+
+<p>Back to <a href="/all_book/">Books</a></p>
+
+{% endblock %}
